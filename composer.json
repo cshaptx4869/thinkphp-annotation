@@ -1,0 +1,35 @@
+{
+    "name": "cshaptx4869/thinkphp-annotation",
+    "description": "thinkphp5.1 注解插件",
+    "type": "library",
+    "license": [
+        "Apache-2.0"
+    ],
+    "authors": [
+        {
+            "name": "cshaptx4869",
+            "email": "994774638@qq.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "ext-json": "*",
+        "topthink/framework": "5.1.*",
+        "doctrine/annotations": "^1.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fairy\\": "src"
+        }
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://mirrors.aliyun.com/composer/"
+        },
+        {
+            "type": "composer",
+            "url": "https://packagist.phpcomposer.com"
+        }
+    ]
+}
