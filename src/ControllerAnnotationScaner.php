@@ -8,6 +8,8 @@ use Doctrine\Common\Annotations\FileCacheReader;
 use Fairy\Annotation\Autowire;
 use Fairy\Annotation\RequestParam;
 use Fairy\Annotation\Validator;
+use think\exception\ValidateException;
+use think\Validate;
 
 class ControllerAnnotationScaner
 {
@@ -62,14 +64,20 @@ class ControllerAnnotationScaner
             //验证
             if ($methodAnnotation instanceof Validator) {
                 /**@var $validate \think\validate */
-                $validate = new $methodAnnotation->class;
-                $scene = $methodAnnotation->scene;
-                if ($scene) {
-                    if (!$validate->scene($scene)->check(app('request')->param())) {
-                        exit($this->formatErrorMsg($validate->getError()));
-                    }
-                } else {
-                    if (!$validate->check(app('request')->param())) {
+                $validate = app($methodAnnotation->class);
+                if (!$validate instanceof Validate) {
+                    throw new \Exception('class ' . $methodAnnotation->class . ' is not a thinkphp validate class');
+                }
+                if ($methodAnnotation->batch) {
+                    $validate->batch();
+                }
+                if ($methodAnnotation->scene) {
+                    $validate->scene($methodAnnotation->scene);
+                }
+                if (!$validate->check(app('request')->param())) {
+                    if ($methodAnnotation->throw) {
+                        throw new ValidateException($validate->getError());
+                    } else {
                         exit($this->formatErrorMsg($validate->getError()));
                     }
                 }
@@ -96,8 +104,10 @@ class ControllerAnnotationScaner
     /**
      * 格式化错误信息
      */
-    protected function formatErrorMsg($msg = '', $data = '', $code = 422)
+    protected function formatErrorMsg($msg = '')
     {
-        return json_encode(compact('code', 'data', 'msg'));
+        return json_encode([
+            'code' => 422, 'data' => '', 'msg' => $msg, 'time' => request()->time()
+        ]);
     }
 }

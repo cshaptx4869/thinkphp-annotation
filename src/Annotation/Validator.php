@@ -25,4 +25,16 @@ class Validator
      * @var string
      */
     public $scene;
+
+    /**
+     * 是否批量验证
+     * @var bool
+     */
+    public $batch;
+
+    /**
+     * 验证失败是否抛出异常
+     * @var bool
+     */
+    public $throw;
 }
