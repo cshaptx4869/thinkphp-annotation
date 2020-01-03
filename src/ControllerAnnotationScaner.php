@@ -85,6 +85,17 @@ class ControllerAnnotationScaner
             //过滤
             if ($methodAnnotation instanceof RequestParam) {
                 $requestParams = app('request')->only($methodAnnotation->fields, $methodAnnotation->method ?: 'param');
+                if ($methodAnnotation->mapping) {
+                    $mapping = [];
+                    foreach ($requestParams as $key => $value) {
+                        if (isset($methodAnnotation->mapping[$key])) {
+                            $mapping[$methodAnnotation->mapping[$key]] = $value;
+                        } else {
+                            $mapping[$key] = $value;
+                        }
+                    }
+                    $requestParams = $mapping;
+                }
                 app('request')->requestParam = $requestParams;
             }
         }

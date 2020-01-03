@@ -60,15 +60,33 @@ class ArticleController
 {
     /**
      * 属性对象注入
+     * class: 类名
      * @Autowire(class="\app\common\model\ArticleModel")
      */
     public $articleModel;
     
     /**
      * 数据验证
-     * @Validator(class="\app\index\validate\Article\Save")
+     * clsss: thinkphp定义的验证器类名
+     * scene: 验证场景名
+     * batch：是否批量验证
+     * throw: 验证失败是否抛出异常
+     * @Validator(
+     *     class="\app\index\validate\Article\Save",
+     *     scene="save",
+     *     batch=false,
+     *     throw=false
+     * )
+     *
      * 获取参数
-     * @RequestParam(fields={"title","image_url","content","is_temporary"},method="post")
+     * fields: 定义要获取的字段名，可批量设置默认值
+     * mapping: 转换前台传递的字段名为自定义的字段名
+     * method: 获取参数的方法
+     * @RequestParam(
+     *     fields={"title","image_url","content","is_temporary","extra":"默认值"},
+     *     mapping={"image_url":"img_url"},
+     *     method="post"
+     * )
      */
     public function save(Request $request)
     {
