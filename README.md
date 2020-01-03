@@ -54,6 +54,8 @@ return [
 
 namespace app\index\controller;
 
+use app\index\validate\Article\SaveValidate;
+use app\common\model\ArticleModel;
 use think\Request;
 
 class ArticleController
@@ -61,7 +63,7 @@ class ArticleController
     /**
      * 属性对象注入
      * class: 类名
-     * @Autowire(class="\app\common\model\ArticleModel")
+     * @Autowire(class=ArticleModel::class)
      */
     public $articleModel;
     
@@ -72,7 +74,7 @@ class ArticleController
      * batch：是否批量验证
      * throw: 验证失败是否抛出异常
      * @Validator(
-     *     class="\app\index\validate\Article\Save",
+     *     class=SaveValidate::class,
      *     scene="save",
      *     batch=false,
      *     throw=false
