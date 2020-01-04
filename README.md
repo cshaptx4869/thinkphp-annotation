@@ -5,7 +5,7 @@ thinkphp-annotation
 
 thinkphp5.1
 
-用注解的方式在控制器中实现：
+用注解的方式在**控制器**中实现：
 
 - 数据验证
 - 获取参数
@@ -44,6 +44,18 @@ return [
 ```
 
 > PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。如果不想要默认输出可继承 \Fairy\ControllerAnnotationScaner 类并定义 getValidateErrorMsg($msg) 方法来获取验证错误信息，自定义后续处理。
+
+
+
+## 支持的注解
+
+| 注解名           | 申明范围 | 作用                         |
+| ---------------- | -------- | ---------------------------- |
+| @Autowire        | 属性     | 自动注入类对象               |
+| @DynamicAutowire | 方法     | 声明当前方法允许属性注入的类 |
+| @IgnoreAutowire  | 方法     | 声明当前方法忽略属性注入的类 |
+| @RequestParam    | 方法     | 过滤、格式化请求参数         |
+| @Validator       | 方法     | 验证器验证                   |
 
 
 

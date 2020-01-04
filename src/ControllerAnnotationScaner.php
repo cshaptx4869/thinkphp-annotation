@@ -6,6 +6,8 @@ use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\FileCacheReader;
 use Fairy\Annotation\Autowire;
+use Fairy\Annotation\DynamicAutowire;
+use Fairy\Annotation\IgnoreAutowire;
 use Fairy\Annotation\RequestParam;
 use Fairy\Annotation\Validator;
 use think\exception\ValidateException;
@@ -13,6 +15,9 @@ use think\Validate;
 
 class ControllerAnnotationScaner
 {
+    public $dynamicAutowireClass = [];
+    public $ignoreAutowireClass = [];
+
     /**
      * 注解读取白名单
      * @var array
@@ -38,10 +43,10 @@ class ControllerAnnotationScaner
         $annotationReader = config('system.annotation.cache') ?
             new FileCacheReader(new AnnotationReader(), env('runtime_path') . DIRECTORY_SEPARATOR . "annotation", true) :
             new AnnotationReader();
-        // 读取请求控制器下的所有属性的注解
-        $this->readPropertiesAnnotation($annotationReader, $instance);
         // 读取请求的控制器下的方法的所有注解
         $this->readMethodAnnotation($annotationReader, $instance, $action);
+        // 读取请求控制器下的所有属性的注解
+        $this->readPropertiesAnnotation($annotationReader, $instance);
     }
 
     /**
@@ -59,7 +64,17 @@ class ControllerAnnotationScaner
             foreach ($propertyAnnotations as $propertyAnnotation) {
                 if ($propertyAnnotation instanceof Autowire) {
                     if ($reflectionProperty->isPublic() && !$reflectionProperty->isStatic()) {
-                        $reflectionProperty->setValue($instance, app($propertyAnnotation->class));
+                        if ($this->dynamicAutowireClass) {
+                            if (in_array($propertyAnnotation->class, $this->dynamicAutowireClass)) {
+                                $reflectionProperty->setValue($instance, app($propertyAnnotation->class));
+                            }
+                        } else if ($this->ignoreAutowireClass) {
+                            if (!in_array($propertyAnnotation->class, $this->ignoreAutowireClass)) {
+                                $reflectionProperty->setValue($instance, app($propertyAnnotation->class));
+                            }
+                        } else {
+                            $reflectionProperty->setValue($instance, app($propertyAnnotation->class));
+                        }
                     }
                 }
             }
@@ -78,8 +93,7 @@ class ControllerAnnotationScaner
         $reflectionMethod = new \ReflectionMethod($instance, $action);
         $methodAnnotations = $annotationReader->getMethodAnnotations($reflectionMethod);
         foreach ($methodAnnotations as $methodAnnotation) {
-            // 验证器
-            if ($methodAnnotation instanceof Validator) {
+            if ($methodAnnotation instanceof Validator) {// 验证器
                 /**@var $validate \think\validate */
                 $validate = app($methodAnnotation->class);
                 if (!$validate instanceof Validate) {
@@ -102,9 +116,7 @@ class ControllerAnnotationScaner
                         }
                     }
                 }
-            }
-            // 参数获取器
-            if ($methodAnnotation instanceof RequestParam) {
+            } else if ($methodAnnotation instanceof RequestParam) {// 参数获取器
                 $requestParams = app('request')->only($methodAnnotation->fields, $methodAnnotation->method ?: 'param');
                 if ($formatRules = $methodAnnotation->json) {
                     $this->formatRequestParams($formatRules, $requestParams);
@@ -121,6 +133,10 @@ class ControllerAnnotationScaner
                     $requestParams = $mapping;
                 }
                 app('request')->requestParam = $requestParams;
+            } else if ($methodAnnotation instanceof DynamicAutowire) {// 设置当前方法Autowire注解声明的属性允许注入的类
+                $this->dynamicAutowireClass = $methodAnnotation->class;
+            } else if ($methodAnnotation instanceof IgnoreAutowire) {// 设置当前方法Autowire注解声明的属性忽略注入的类
+                $this->ignoreAutowireClass = $methodAnnotation->class;
             }
         }
     }
