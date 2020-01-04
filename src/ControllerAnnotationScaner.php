@@ -106,6 +106,9 @@ class ControllerAnnotationScaner
             // 参数获取器
             if ($methodAnnotation instanceof RequestParam) {
                 $requestParams = app('request')->only($methodAnnotation->fields, $methodAnnotation->method ?: 'param');
+                if ($formatRules = $methodAnnotation->json) {
+                    $this->formatRequestParams($formatRules, $requestParams);
+                }
                 if ($methodAnnotation->mapping) {
                     $mapping = [];
                     foreach ($requestParams as $key => $value) {
@@ -146,5 +149,43 @@ class ControllerAnnotationScaner
         return json_encode([
             'code' => 422, 'data' => '', 'msg' => $msg, 'time' => request()->time()
         ]);
+    }
+
+    /**
+     * 格式化请求参数
+     * @param array $rules
+     * @param $requestParams
+     * @throws \Exception
+     */
+    protected function formatRequestParams(array $rules, &$requestParams)
+    {
+        foreach ($rules as $field => $rule) {
+            if (is_int($field)) {
+                $field = (string)$rule;
+            }
+            if (isset($requestParams[$field])) {
+                $data = json_decode($requestParams[$field], true);
+                if (is_null($data)) {
+                    throw new \Exception($field . '字段的值无法json反序列化');
+                }
+                // 过滤json数据的字段
+                if (is_array($rule) && $rule) {
+                    foreach ($data as $k => $v) {
+                        if (is_string($k)) {//一维数组
+                            if (!in_array($k, $rule)) {
+                                unset($data[$k]);
+                            }
+                        } else if (is_int($k) && is_array($v)) {//二维数组
+                            foreach ($v as $kk => $vv) {
+                                if (!in_array($kk, $rule)) {
+                                    unset($data[$k][$kk]);
+                                }
+                            }
+                        }
+                    }
+                }
+                $requestParams[$field] = $data;
+            }
+        }
     }
 }

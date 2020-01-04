@@ -90,8 +90,19 @@ class ArticleController
      * fields: 定义要获取的字段名，可批量设置默认值 array类型
      * mapping: 转换前台传递的字段名为自定义的字段名 array类型
      * method: 获取参数的方法,支持get、post、put、delte string类型
+     * json: 格式化json字段的数据 array类型
+     * 
+     * json使用示例：
+     * json:{field1,field2,...fieldn}
+     * 表示格式化field1,field2,...,字段的json数据
+     *
+     * 支持json一维和二维字段的涮选，如
+     * json:{field1:{childField1,childField2...}}
+     * 表示格式化field1字段的json数据，并只获取field1字段下的childField1和childField2下标的值(支持深度一维和二维,会自动识别)
+     *
      * @RequestParam(
-     *     fields={"title","image_url","content","is_temporary","extra":"默认值"},
+     *     fields={"title","image_url","content","category_id","is_temporary","extra":"默认值"},
+     *     json={"category_id"},
      *     mapping={"image_url":"img_url"},
      *     method="post"
      * )
