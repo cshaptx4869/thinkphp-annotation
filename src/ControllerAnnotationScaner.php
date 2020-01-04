@@ -69,7 +69,7 @@ class ControllerAnnotationScaner
                                 $reflectionProperty->setValue($instance, app($propertyAnnotation->class));
                             }
                         } else if ($this->ignoreAutowireClass) {
-                            if (!in_array($propertyAnnotation->class, $this->ignoreAutowireClass)) {
+                            if (!in_array('*', $this->ignoreAutowireClass) && !in_array($propertyAnnotation->class, $this->ignoreAutowireClass)) {
                                 $reflectionProperty->setValue($instance, app($propertyAnnotation->class));
                             }
                         } else {
