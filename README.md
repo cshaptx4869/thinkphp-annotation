@@ -43,7 +43,7 @@ return [
 ]
 ```
 
-> PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。
+> PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。如果不想要默认输出可继承 \Fairy\ControllerAnnotationScaner 类并定义 getValidateErrorMsg($msg) 方法来获取验证错误信息，自定义后续处理。
 
 
 
