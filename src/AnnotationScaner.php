@@ -9,6 +9,7 @@ use Fairy\Annotation\Autowire;
 use Fairy\Annotation\RequestParam;
 use Fairy\Annotation\Validator;
 use think\exception\ValidateException;
+use think\Validate;
 
 class AnnotationScaner
 {
@@ -83,7 +84,7 @@ class AnnotationScaner
             if ($methodAnnotation instanceof Validator) {// 验证器
                 /**@var $validate \think\validate */
                 $validate = app($methodAnnotation->class);
-                if (!$validate instanceof Validator) {
+                if (!$validate instanceof Validate) {
                     throw new \Exception('class ' . $methodAnnotation->class . ' is not a thinkphp validate class');
                 }
                 if ($methodAnnotation->batch) {
