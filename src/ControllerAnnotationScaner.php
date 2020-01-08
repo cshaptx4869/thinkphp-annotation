@@ -2,12 +2,18 @@
 
 namespace Fairy;
 
-class ControllerAnnotationScaner extends AnnotationScaner
+class ControllerAnnotationScaner
 {
+    /**
+     * @param array $call
+     * @throws \ReflectionException
+     */
     public function run(array $call)
     {
+        /**@var $annotationScaner AnnotationScaner */
+        $annotationScaner = app(AnnotationScaner::class);
         list($instance, $action) = $call;
-        $this->readMethodAnnotation($instance, $action);
-        $this->readPropertiesAnnotation($instance);
+        $annotationScaner->readMethodAnnotation($instance, $action);
+        $annotationScaner->readPropertiesAnnotation($instance);
     }
 }

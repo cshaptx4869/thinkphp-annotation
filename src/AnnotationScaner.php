@@ -10,10 +10,10 @@ use Fairy\Annotation\RequestParam;
 use Fairy\Annotation\Validator;
 use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\Node\Stmt\Use_;
+use PhpParser\Parser;
 use PhpParser\ParserFactory;
 use think\exception\ValidateException;
 use think\Validate;
-use ReflectionClass;
 
 class AnnotationScaner
 {
@@ -21,6 +21,11 @@ class AnnotationScaner
      * @var $annotationReader FileCacheReader|AnnotationReader
      */
     protected $annotationReader;
+
+    /**
+     * @var Parser
+     */
+    protected $parser;
 
     /**
      * 注解读取白名单
@@ -51,6 +56,7 @@ class AnnotationScaner
         $this->annotationReader = config('system.annotation.cache') ?
             new FileCacheReader(new AnnotationReader(), env('runtime_path') . DIRECTORY_SEPARATOR . "annotation", true) :
             new AnnotationReader();
+        $this->parser = (new ParserFactory())->create(ParserFactory::PREFER_PHP5);
     }
 
     /**
@@ -67,7 +73,7 @@ class AnnotationScaner
             foreach ($propertyAnnotations as $propertyAnnotation) {
                 if ($propertyAnnotation instanceof Autowire) {
                     if ($reflectionProperty->isPublic() && !$reflectionProperty->isStatic()) {
-                        if ($class = $this->getType($reflectionClass, $reflectionProperty->getDocComment())) {
+                        if ($class = $this->getPropertyType($reflectionClass->getFileName(), $reflectionClass->getNamespaceName(), $reflectionProperty->getDocComment())) {
                             $reflectionProperty->setValue($instance, app($class));
                         }
                     }
@@ -196,37 +202,25 @@ class AnnotationScaner
     }
 
     /**
-     * 获取类文件的内容
-     * @param ReflectionClass $reflection
-     * @return string
+     * 获取属性声明的var类型
+     * @param $filepath
+     * @param $namespace
+     * @param $doc
+     * @return bool|mixed|string
      */
-    protected function getClassSource(ReflectionClass $reflection)
+    protected function getPropertyType($filepath, $namespace, $doc)
     {
-        $filepath = $reflection->getFileName();
-        $startLine = $reflection->getStartLine() - 1;
-        $endLine = $reflection->getEndLine();
-        $length = $endLine - $startLine;
-        $source = file($filepath);
-        $body = implode("", array_slice($source, $startLine, $length));
-
-        return $body;
-    }
-
-    protected function getType(ReflectionClass $reflectionClass, $docComment)
-    {
-        if (!preg_match('/@var\s+(\S+)\s+/', $docComment, $matches)) {
+        if (!preg_match('/@var\s+(\S+)\s+/', $doc, $matches)) {
             return false;
         }
         $type = $matches[1];
-        $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP5);
-        $code = $this->getClassSource($reflectionClass);
-        $ast = $parser->parse($code);
-        $uses = $this->getUses($ast);
         if (!(strpos($type, '\\') === 0)) {
+            $stmts = $this->parser->parse(file_get_contents($filepath));
+            $uses = $this->getUses($stmts);
             if (array_key_exists($type, $uses)) {
                 $type = $uses[$type];
             } else {
-                $type = $reflectionClass->getNamespaceName() . '\\' . $type;
+                $type = $namespace . '\\' . $type;
             }
         }
 
@@ -248,7 +242,7 @@ class AnnotationScaner
                         foreach ($vv->uses as $vvv) {
                             $name = implode('\\', $vvv->name->parts);
                             if ($vvv->alias) {
-                                $alias = $vvv->alias->name;
+                                $alias = $vvv->alias;
                             } else {
                                 $pos = strrpos($name, '\\');
                                 $alias = substr($name, $pos ? $pos + 1 : 0);
