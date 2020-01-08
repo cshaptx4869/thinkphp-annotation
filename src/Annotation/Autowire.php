@@ -12,10 +12,5 @@ use Doctrine\Common\Annotations\Annotation\Target;
  */
 class Autowire
 {
-    /**
-     * 要注入的类名
-     * @Required()
-     * @var string
-     */
-    public $class;
+
 }

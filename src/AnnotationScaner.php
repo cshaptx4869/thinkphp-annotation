@@ -63,7 +63,9 @@ class AnnotationScaner
             foreach ($propertyAnnotations as $propertyAnnotation) {
                 if ($propertyAnnotation instanceof Autowire) {
                     if ($reflectionProperty->isPublic() && !$reflectionProperty->isStatic()) {
-                        $reflectionProperty->setValue($instance, app($propertyAnnotation->class));
+                        if (preg_match('/@var\s+(\S+)\s+/', $reflectionProperty->getDocComment(), $matches)) {
+                            $reflectionProperty->setValue($instance, app($matches[1]));
+                        }
                     }
                 }
             }
