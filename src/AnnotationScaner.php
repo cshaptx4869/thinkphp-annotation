@@ -8,8 +8,12 @@ use Doctrine\Common\Annotations\FileCacheReader;
 use Fairy\Annotation\Autowire;
 use Fairy\Annotation\RequestParam;
 use Fairy\Annotation\Validator;
+use PhpParser\Node\Stmt\Namespace_;
+use PhpParser\Node\Stmt\Use_;
+use PhpParser\ParserFactory;
 use think\exception\ValidateException;
 use think\Validate;
+use ReflectionClass;
 
 class AnnotationScaner
 {
@@ -63,8 +67,8 @@ class AnnotationScaner
             foreach ($propertyAnnotations as $propertyAnnotation) {
                 if ($propertyAnnotation instanceof Autowire) {
                     if ($reflectionProperty->isPublic() && !$reflectionProperty->isStatic()) {
-                        if (preg_match('/@var\s+(\S+)\s+/', $reflectionProperty->getDocComment(), $matches)) {
-                            $reflectionProperty->setValue($instance, app($matches[1]));
+                        if ($class = $this->getType($reflectionClass, $reflectionProperty->getDocComment())) {
+                            $reflectionProperty->setValue($instance, app($class));
                         }
                     }
                 }
@@ -189,5 +193,73 @@ class AnnotationScaner
                 $requestParams[$field] = $data;
             }
         }
+    }
+
+    /**
+     * 获取类文件的内容
+     * @param ReflectionClass $reflection
+     * @return string
+     */
+    protected function getClassSource(ReflectionClass $reflection)
+    {
+        $filepath = $reflection->getFileName();
+        $startLine = $reflection->getStartLine() - 1;
+        $endLine = $reflection->getEndLine();
+        $length = $endLine - $startLine;
+        $source = file($filepath);
+        $body = implode("", array_slice($source, $startLine, $length));
+
+        return $body;
+    }
+
+    protected function getType(ReflectionClass $reflectionClass, $docComment)
+    {
+        if (!preg_match('/@var\s+(\S+)\s+/', $docComment, $matches)) {
+            return false;
+        }
+        $type = $matches[1];
+        $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP5);
+        $code = $this->getClassSource($reflectionClass);
+        $ast = $parser->parse($code);
+        $uses = $this->getUses($ast);
+        if (!(strpos($type, '\\') === 0)) {
+            if (array_key_exists($type, $uses)) {
+                $type = $uses[$type];
+            } else {
+                $type = $reflectionClass->getNamespaceName() . '\\' . $type;
+            }
+        }
+
+        return $type;
+    }
+
+    /**
+     * 获取类中的use信息
+     * @param $stmts
+     * @return array
+     */
+    protected function getUses($stmts)
+    {
+        $uses = [];
+        foreach ($stmts as $v) {
+            if ($v instanceof Namespace_) {
+                foreach ($v->stmts as $vv) {
+                    if ($vv instanceof Use_) {
+                        foreach ($vv->uses as $vvv) {
+                            $name = implode('\\', $vvv->name->parts);
+                            if ($vvv->alias) {
+                                $alias = $vvv->alias->name;
+                            } else {
+                                $pos = strrpos($name, '\\');
+                                $alias = substr($name, $pos ? $pos + 1 : 0);
+                            }
+                            $uses[$alias] = $name;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $uses;
     }
 }
