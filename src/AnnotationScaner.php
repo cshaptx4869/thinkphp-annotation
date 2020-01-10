@@ -74,7 +74,7 @@ class AnnotationScaner
                 if ($propertyAnnotation instanceof Autowire) {
                     if ($reflectionProperty->isPublic() && !$reflectionProperty->isStatic()) {
                         if ($class = $this->getPropertyType($reflectionClass->getFileName(), $reflectionClass->getNamespaceName(), $reflectionProperty->getDocComment())) {
-                            $reflectionProperty->setValue($instance, app($class));
+                            $reflectionProperty->setValue($instance, new Proxy(app($class)));
                         }
                     }
                 }
@@ -86,6 +86,7 @@ class AnnotationScaner
      * 读取当前方法的注解
      * @param $instance
      * @param $action
+     * @return mixed
      * @throws \ReflectionException
      */
     public function readMethodAnnotation($instance, $action)
@@ -93,46 +94,50 @@ class AnnotationScaner
         $reflectionMethod = new \ReflectionMethod($instance, $action);
         $methodAnnotations = $this->annotationReader->getMethodAnnotations($reflectionMethod);
         foreach ($methodAnnotations as $methodAnnotation) {
-            if ($methodAnnotation instanceof Validator) {// 验证器
-                /**@var $validate \think\validate */
-                $validate = app($methodAnnotation->class);
-                if (!$validate instanceof Validate) {
-                    throw new \Exception('class ' . $methodAnnotation->class . ' is not a thinkphp validate class');
-                }
-                if ($methodAnnotation->batch) {
-                    $validate->batch();
-                }
-                if ($methodAnnotation->scene) {
-                    $validate->scene($methodAnnotation->scene);
-                }
-                if (!$validate->check(app('request')->param())) {
-                    if ($methodAnnotation->throw) {
-                        throw new ValidateException($validate->getError());
-                    } else {
-                        if (method_exists($this, 'getValidateErrorMsg')) {
-                            call_user_func([$this, 'getValidateErrorMsg'], $validate->getError());
+            if (!$methodAnnotation instanceof AnnotationInterceptor) {
+                if ($methodAnnotation instanceof Validator) {// 验证器
+                    /**@var $validate \think\validate */
+                    $validate = app($methodAnnotation->class);
+                    if (!$validate instanceof Validate) {
+                        throw new \Exception('class ' . $methodAnnotation->class . ' is not a thinkphp validate class');
+                    }
+                    if ($methodAnnotation->batch) {
+                        $validate->batch();
+                    }
+                    if ($methodAnnotation->scene) {
+                        $validate->scene($methodAnnotation->scene);
+                    }
+                    if (!$validate->check(app('request')->param())) {
+                        if ($methodAnnotation->throw) {
+                            throw new ValidateException($validate->getError());
                         } else {
-                            exit($this->formatErrorMsg($validate->getError()));
+                            if (method_exists($this, 'getValidateErrorMsg')) {
+                                call_user_func([$this, 'getValidateErrorMsg'], $validate->getError());
+                            } else {
+                                exit($this->formatErrorMsg($validate->getError()));
+                            }
                         }
                     }
-                }
-            } else if ($methodAnnotation instanceof RequestParam) {// 参数获取器
-                $requestParams = app('request')->only($methodAnnotation->fields, $methodAnnotation->method ?: 'param');
-                if ($formatRules = $methodAnnotation->json) {
-                    $this->formatRequestParams($formatRules, $requestParams);
-                }
-                if ($methodAnnotation->mapping) {
-                    $mapping = [];
-                    foreach ($requestParams as $key => $value) {
-                        if (isset($methodAnnotation->mapping[$key])) {
-                            $mapping[$methodAnnotation->mapping[$key]] = $value;
-                        } else {
-                            $mapping[$key] = $value;
-                        }
+                } else if ($methodAnnotation instanceof RequestParam) {// 参数获取器
+                    $requestParams = app('request')->only($methodAnnotation->fields, $methodAnnotation->method ?: 'param');
+                    if ($formatRules = $methodAnnotation->json) {
+                        $this->formatRequestParams($formatRules, $requestParams);
                     }
-                    $requestParams = $mapping;
+                    if ($methodAnnotation->mapping) {
+                        $mapping = [];
+                        foreach ($requestParams as $key => $value) {
+                            if (isset($methodAnnotation->mapping[$key])) {
+                                $mapping[$methodAnnotation->mapping[$key]] = $value;
+                            } else {
+                                $mapping[$key] = $value;
+                            }
+                        }
+                        $requestParams = $mapping;
+                    }
+                    app('request')->requestParam = $requestParams;
                 }
-                app('request')->requestParam = $requestParams;
+            } else {
+                return $methodAnnotation;
             }
         }
     }

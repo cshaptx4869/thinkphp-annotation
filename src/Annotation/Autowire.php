@@ -2,7 +2,6 @@
 
 namespace Fairy\Annotation;
 
-use Doctrine\Common\Annotations\Annotation\Required;
 use Doctrine\Common\Annotations\Annotation\Target;
 
 /**
