@@ -39,8 +39,7 @@ class Proxy
         foreach ($annotationObjs as $k => $annotationObj) {
             if (!$annotationObj instanceof AnnotationInterceptor) {
                 unset($annotationObjs[$k]);
-            }
-            if (in_array(get_class($annotationObj), $whitelist)) {
+            } elseif (in_array(get_class($annotationObj), $whitelist)) {
                 unset($annotationObjs[$k]);
             }
         }
