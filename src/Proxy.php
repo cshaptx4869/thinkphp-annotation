@@ -6,7 +6,7 @@ namespace Fairy;
 
 class Proxy
 {
-    public $bean;
+    private $bean;
 
     public function __construct($bean)
     {
@@ -82,5 +82,10 @@ class Proxy
         }
 
         return $result;
+    }
+
+    public function getBean()
+    {
+        return $this->bean;
     }
 }

@@ -27,6 +27,8 @@ class AnnotationScaner
      */
     protected $parser;
 
+    protected $proxy = [];
+
     /**
      * 注解读取白名单
      * @var array
@@ -74,7 +76,13 @@ class AnnotationScaner
                 if ($propertyAnnotation instanceof Autowire) {
                     if ($reflectionProperty->isPublic() && !$reflectionProperty->isStatic()) {
                         if ($class = $this->getPropertyType($reflectionClass->getFileName(), $reflectionClass->getNamespaceName(), $reflectionProperty->getDocComment())) {
-                            $reflectionProperty->setValue($instance, new Proxy(app($class)));
+                            if (isset($this->proxy[$class])) {
+                                $reflectionProperty->setValue($instance, $this->proxy[$class]);
+                            } else {
+                                $proxyObj = new Proxy(app($class));
+                                $this->proxy[$class] = $proxyObj;
+                                $reflectionProperty->setValue($instance, $proxyObj);
+                            }
                         }
                     }
                 }
