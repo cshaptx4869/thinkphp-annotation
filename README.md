@@ -1,30 +1,39 @@
 thinkphp-annotation
 =======
+> [详细文档]: https://www.cnblogs.com/cshaptx4869/p/12178960.html
+
 前言:
 -------
 
-thinkphp5.1
+thinkphp5.1中用注解的方式实现：
 
-用注解的方式在**控制器**中实现：
-
-- 数据验证
-- 获取参数
-- 属性对象注入
+- 请求数据验证
+- 请求数据过滤、格式化
+- 属性对象自动注入
+- 自动事务
 
 
 
 安装
 ------------
 
+稳定版：
+
 ```bash
 composer require cshaptx4869/thinkphp-annotation
+```
+
+最新版：
+
+```bash
+composer require cshaptx4869/thinkphp-annotation:dev-master
 ```
 
 
 
 ## 配置
 
-`tags.php `添加行为
+`tags.php `添加行为，用于控制器注解扫描
 
 ```php
 'action_begin' => [
@@ -32,22 +41,36 @@ composer require cshaptx4869/thinkphp-annotation
 ]
 ```
 
+模型中使用属性注解的话，需要在模型中引入 \Fairy\ModelAnnotationScaner 的trait
+
+```php
+use \Fairy\ModelAnnotationScaner;
+```
+
 添加 `system.php` 配置文件（可选）
 
 ```php
 return [
     'annotation' => [
-        'cache' => false,//是否开启注解读取缓存
-        'writelist' => []//注解读取白名单
+        'cache' => false,// 是否开启注解读取缓存，默认false
+        'writelist' => []// 注解读取白名单，默认[]
+        'interceptor' => [// 注解拦截器相关配置
+            'enable' => true,// 默认开启注解拦截器
+            'whitelist' => []// 注解拦截器白名单，默认[]
+        ]
     ]
 ]
 ```
 
 > PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。如果不想要默认输出可继承 \Fairy\ControllerAnnotationScaner 类并定义 getValidateErrorMsg($msg) 方法来获取验证错误信息，自定义后续处理。
+>
+> 不同版本使用上会有些许差别。
 
 
 
 ## 支持的注解
+
+稳定版：
 
 | 注解名           | 申明范围 | 作用                         |
 | ---------------- | -------- | ---------------------------- |
@@ -57,9 +80,24 @@ return [
 | @RequestParam    | 方法     | 过滤、格式化请求参数         |
 | @Validator       | 方法     | 验证器验证                   |
 
+最新版：
+
+| 注解名        | 申明范围 | 作用                 |
+| ------------- | -------- | -------------------- |
+| @RequestParam | 方法     | 过滤、格式化请求参数 |
+| @Validator    | 方法     | 验证器验证           |
+| @Autowire     | 属性     | 自动注入类对象       |
+| @Transaction  | 方法     | 自动事务             |
+
+> PS：
+>
+> Transaction 注解根据当前方法返回值自动判断事务后续处理，如返回值等价于true就会自动commit，否则rollback。 
+>
+> Transaction 注解需要搭配 Autowire注解使用，且不支持在控制器中使用，推荐在模型中使用。
 
 
-## 使用
+
+## dev-master 版本使用示例
 
 `ArticleController` 控制器：
 
@@ -80,8 +118,8 @@ class ArticleController
 {
     /**
      * 属性对象注入
-     * class: 类名(必填) string类型
-     * @Autowire(class=ArticleModel::class)
+     * @Autowire()
+     * @var ArticleModel
      */
     public $articleModel;
     
@@ -125,6 +163,53 @@ class ArticleController
         $postData = $request->requestParam;
 
         return MyToolkit::success($this->articleModel->store($postData));
+    }
+}
+```
+
+ArticleModel 模型：
+
+```php
+<?php
+
+namespace app\common\model;
+
+use Fairy\Annotation\Autowire;
+use Fairy\Annotation\Transaction;
+use Fairy\ModelAnnotationScaner;
+use think\Db;
+use think\Model;
+
+class ArticleModel extends Model
+{
+    // 引入支持模型的属性使用注解的trait
+    use ModelAnnotationScaner;
+
+    /**
+     * 注入对象
+     * @Autowire()
+     * @var ArticleCategoryRelationModel
+     */
+    public $articleCategoryRelationModel;
+    
+    /**
+     * 注解控制事务
+     * 返回值等价于true 事务自动 commit 否则 rollback
+     * @Transaction()
+     */
+    public function store(array $params)
+    {
+        $categoryIds = $params['category_id'];
+        unset($params['category_id']);
+        $articleId = Db::name('article')->insertGetId($params);
+        $realtion = array_map(function ($categoryId) use ($articleId) {
+            return [
+                'article_id' => $articleId,
+                'category_id' => $categoryId
+            ];
+        }, $categoryIds);
+
+        return $this->articleCategoryRelationModel->store($realtion);
     }
 }
 ```

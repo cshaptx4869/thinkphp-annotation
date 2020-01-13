@@ -91,16 +91,19 @@ class AnnotationScaner
     }
 
     /**
-     * 读取当前方法的注解
+     * 读取当前方法的注解 如果有拦截器注解则返回拦截器注解对象数组
      * @param $instance
-     * @param $action
-     * @return mixed
+     * @param $method
+     * @return array
      * @throws \ReflectionException
      */
-    public function readMethodAnnotation($instance, $action)
+    public function readMethodAnnotation($instance, $method)
     {
-        $reflectionMethod = new \ReflectionMethod($instance, $action);
+        $reflectionMethod = new \ReflectionMethod($instance, $method);
         $methodAnnotations = $this->annotationReader->getMethodAnnotations($reflectionMethod);
+        $interceptorEnable = config('?system.annotation.interceptor.enable') ? config('system.annotation.interceptor.enable') : true;
+        $interceptorWhitelist = config('?system.annotation.interceptor.whitelist') ? config('system.annotation.interceptor.whitelist') : [];
+        $interceptorAnnotationObjs = [];
         foreach ($methodAnnotations as $methodAnnotation) {
             if (!$methodAnnotation instanceof AnnotationInterceptor) {
                 if ($methodAnnotation instanceof Validator) {// 验证器
@@ -145,9 +148,13 @@ class AnnotationScaner
                     app('request')->requestParam = $requestParams;
                 }
             } else {
-                return $methodAnnotation;
+                if ($interceptorEnable && !in_array(get_class($methodAnnotation), $interceptorWhitelist)) {
+                    $interceptorAnnotationObjs[] = $methodAnnotation;
+                }
             }
         }
+
+        return $interceptorAnnotationObjs;
     }
 
     /**

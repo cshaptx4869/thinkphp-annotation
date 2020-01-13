@@ -15,36 +15,11 @@ class Proxy
 
     public function __call($methodName, $arguments)
     {
-        $annotations = $this->getAnnotationInterceptors($methodName);
-
-        return $this->callMethod($methodName, $arguments, $annotations);
-    }
-
-    /**
-     * 获取当前方法的所有拦截器注解对象
-     * @param $methodName
-     * @return array
-     * @throws \ReflectionException
-     */
-    private function getAnnotationInterceptors($methodName)
-    {
-        if (config('?system.annotation.interceptor.enable') && !config('system.annotation.interceptor.enable')) {
-            return [];
-        }
-        $annotationObjs = [];
         /**@var $annotationScaner AnnotationScaner */
         $annotationScaner = app(AnnotationScaner::class);
-        $annotationObjs[] = $annotationScaner->readMethodAnnotation($this->bean, $methodName);
-        $whitelist = config('?annotation.interceptor.whitelist') ? config('annotation.interceptor.whitelist') : [];
-        foreach ($annotationObjs as $k => $annotationObj) {
-            if (!$annotationObj instanceof AnnotationInterceptor) {
-                unset($annotationObjs[$k]);
-            } elseif (in_array(get_class($annotationObj), $whitelist)) {
-                unset($annotationObjs[$k]);
-            }
-        }
+        $interceptorAnnotationObjs = $annotationScaner->readMethodAnnotation($this->bean, $methodName);
 
-        return $annotationObjs;
+        return $this->callMethod($methodName, $arguments, $interceptorAnnotationObjs);
     }
 
     /**
