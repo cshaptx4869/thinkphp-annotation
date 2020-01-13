@@ -51,14 +51,18 @@ return [
         'interceptor' => [// 注解拦截器相关配置
             'enable' => true,// 默认开启注解拦截器
             'whitelist' => []// 注解拦截器白名单，默认[]
+        ],
+        'validate' => [
+            'callback' => function($msg) {
+            	// 自定义验证错误信息后续处理
+            }
         ]
     ]
 ]
 ```
 
-> PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。如果不想要默认输出可继承 \Fairy\AnnotationScaner 类并定义 getValidateErrorMsg($msg) 方法来获取验证错误信息，自定义后续处理。
+> PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。可通过配置 callback函数自定义后续处理。请注意，不同版本使用上会有些许差别。
 >
-> 不同版本使用注解上会有些许差别。
 
 
 

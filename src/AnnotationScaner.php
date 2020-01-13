@@ -103,6 +103,7 @@ class AnnotationScaner
         $methodAnnotations = $this->annotationReader->getMethodAnnotations($reflectionMethod);
         $interceptorEnable = config('?system.annotation.interceptor.enable') ? config('system.annotation.interceptor.enable') : true;
         $interceptorWhitelist = config('?system.annotation.interceptor.whitelist') ? config('system.annotation.interceptor.whitelist') : [];
+        $validateErrorMsgCallback = config('?system.annotation.validate.callback') ? config('system.annotation.validate.callback') : [];
         $interceptorAnnotationObjs = [];
         foreach ($methodAnnotations as $methodAnnotation) {
             if (!$methodAnnotation instanceof AnnotationInterceptor) {
@@ -122,8 +123,8 @@ class AnnotationScaner
                         if ($methodAnnotation->throw) {
                             throw new ValidateException($validate->getError());
                         } else {
-                            if (method_exists($this, 'getValidateErrorMsg')) {
-                                call_user_func([$this, 'getValidateErrorMsg'], $validate->getError());
+                            if ($validateErrorMsgCallback && $validateErrorMsgCallback instanceof \Closure) {
+                                call_user_func($validateErrorMsgCallback, $validate->getError());
                             } else {
                                 exit($this->formatErrorMsg($validate->getError()));
                             }
