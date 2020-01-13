@@ -1,6 +1,6 @@
-thinkphp-annotation
-=======
-> [详细文档]: https://www.cnblogs.com/cshaptx4869/p/12178960.html
+# thinkphp-annotation
+
+
 
 前言:
 -------
@@ -12,21 +12,15 @@ thinkphp5.1中用注解的方式实现：
 - 属性对象自动注入
 - 自动事务
 
+> 最新文档地址：https://www.cnblogs.com/cshaptx4869/p/12178960.html 
+
 
 
 安装
 ------------
 
-稳定版：
-
 ```bash
 composer require cshaptx4869/thinkphp-annotation
-```
-
-最新版：
-
-```bash
-composer require cshaptx4869/thinkphp-annotation:dev-master
 ```
 
 
@@ -62,15 +56,15 @@ return [
 ]
 ```
 
-> PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。如果不想要默认输出可继承 \Fairy\ControllerAnnotationScaner 类并定义 getValidateErrorMsg($msg) 方法来获取验证错误信息，自定义后续处理。
+> PS：默认验证器注解验证不通过会终止程序运行并返回`json`格式的验证错误信息。如果不想要默认输出可继承 \Fairy\AnnotationScaner 类并定义 getValidateErrorMsg($msg) 方法来获取验证错误信息，自定义后续处理。
 >
-> 不同版本使用上会有些许差别。
+> 不同版本使用注解上会有些许差别。
 
 
 
 ## 支持的注解
 
-稳定版：
+###### v0.1.0版：
 
 | 注解名           | 申明范围 | 作用                         |
 | ---------------- | -------- | ---------------------------- |
@@ -80,7 +74,7 @@ return [
 | @RequestParam    | 方法     | 过滤、格式化请求参数         |
 | @Validator       | 方法     | 验证器验证                   |
 
-最新版：
+###### v0.1.1版：
 
 | 注解名        | 申明范围 | 作用                 |
 | ------------- | -------- | -------------------- |
@@ -89,15 +83,99 @@ return [
 | @Autowire     | 属性     | 自动注入类对象       |
 | @Transaction  | 方法     | 自动事务             |
 
-> PS：
+> #### 版本差异：
+>
+> v0.1.1新增：
+>
+> **Transaction 注解**
 >
 > Transaction 注解根据当前方法返回值自动判断事务后续处理，如返回值等价于true就会自动commit，否则rollback。 
 >
 > Transaction 注解需要搭配 Autowire注解使用，且不支持在控制器中使用，推荐在模型中使用。
+>
+> **ModelAnnotationScaner**  
+>
+> 支持模型中使用属性注解
+>
+> 
+>
+> Autowire 注解改动：
+>
+> v0.1.0 版本中 Autowire 注解必须写class属性，如 Autowire(class=ArticleModel::class)，而在v0.1.1版本中 Autowire 注解则没有class属性而是通过@var ArticleModel 注解来自动识别。
 
 
 
-## dev-master 版本使用示例
+## v0.1.0版本使用示例
+
+`ArticleController` 控制器：
+
+```php
+<?php
+
+namespace app\index\controller;
+
+use app\index\validate\Article\SaveValidate;
+use app\common\model\ArticleModel;
+// 引入对应的注解
+use Fairy\Annotation\Autowire;
+use Fairy\Annotation\RequestParam;
+use Fairy\Annotation\Validator;
+use think\Request;
+
+class ArticleController
+{
+    /**
+     * 属性对象注入
+     * @Autowire(class=ArticleModel::class)
+     */
+    public $articleModel;
+    
+    /**
+     * 数据验证
+     * clsss: thinkphp定义的验证器类名(必填) string类型
+     * scene: 验证场景名 string类型
+     * batch：是否批量验证 bool类型
+     * throw: 验证失败是否抛出异常 bool类型
+     * @Validator(
+     *     class=SaveValidate::class,
+     *     scene="save",
+     *     batch=false,
+     *     throw=false
+     * )
+     *
+     * 获取参数
+     * fields: 定义要获取的字段名，可批量设置默认值 array类型
+     * mapping: 转换前台传递的字段名为自定义的字段名 array类型
+     * method: 获取参数的方法,支持get、post、put、delte string类型
+     * json: 格式化json字段的数据 array类型
+     * 
+     * json使用示例：
+     * json:{field1,field2,...fieldn}
+     * 表示格式化field1,field2,...,字段的json数据
+     *
+     * 支持json一维和二维字段的涮选，如
+     * json:{field1:{childField1,childField2...}}
+     * 表示格式化field1字段的json数据，并只获取field1字段下的childField1和childField2下标的值(支持深度一维和二维,会自动识别)
+     *
+     * @RequestParam(
+     *     fields={"title","image_url","content","category_id","is_temporary","extra":"默认值"},
+     *     json={"category_id"},
+     *     mapping={"image_url":"img_url"},
+     *     method="post"
+     * )
+     */
+    public function save(Request $request)
+    {
+        //获取过滤过后的参数
+        $postData = $request->requestParam;
+
+        return MyToolkit::success($this->articleModel->store($postData));
+    }
+```
+
+
+
+## v0.1.1版本使用示例
 
 `ArticleController` 控制器：
 
@@ -167,7 +245,7 @@ class ArticleController
 }
 ```
 
-ArticleModel 模型：
+`ArticleModel` 模型：
 
 ```php
 <?php
