@@ -32,16 +32,23 @@ class Proxy
     private function callMethod($methodName, $arguments, $annotations = [])
     {
         $isBlocked = false;
+        $data = null;
+
         foreach ($annotations as $annotation) {
             $beforeActionData = call_user_func_array([$annotation, 'beforeAction'], [$methodName, $arguments, $this]);
-            if ($beforeActionData === false) {
-                $isBlocked = true;
-                break;
+            if ($beforeActionData !== null && $beforeActionData instanceof Blocker) {
+                if (isset($beforeActionData->data)) {
+                    $data = $beforeActionData->data;
+                }
+                if ($beforeActionData->block) {
+                    $isBlocked = true;
+                    break;
+                }
             }
         }
 
         if ($isBlocked) {
-            $result = $beforeActionData;
+            $result = $data;
         } else {
             try {
                 $result = call_user_func_array([$this->bean, $methodName], $arguments);
@@ -62,5 +69,10 @@ class Proxy
     public function getBean()
     {
         return $this->bean;
+    }
+
+    public function getClass()
+    {
+        return get_class($this->bean);
     }
 }
